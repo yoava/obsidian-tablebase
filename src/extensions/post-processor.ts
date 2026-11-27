@@ -2,6 +2,7 @@ import { MarkdownPostProcessorContext, MarkdownSectionInformation } from "obsidi
 import { findTargetTable, parseMarkdownTables } from "../core/markdown-parser";
 import { stripTypeAnnotation } from "../core/table-mutator";
 import { toPlainText } from "../utils/link-renderer";
+import { renderedCellToMarkdown } from "../utils/rendered-cell";
 import { TableViewController } from "../services/table-view-controller";
 import { TableViewRegistry } from "../services/table-view-registry";
 import { SettingsService } from "../services/settings-service";
@@ -115,7 +116,7 @@ export class TablePostProcessor {
         cells: row.cells.map((rendered, colIndex) => {
           const fromSource = sourceRow.cells[colIndex];
           if (fromSource === undefined) return rendered;
-          return toPlainText(fromSource) === rendered ? fromSource : rendered;
+          return toPlainText(fromSource) === toPlainText(rendered) ? fromSource : rendered;
         }),
       };
     });
@@ -140,9 +141,7 @@ export class TablePostProcessor {
     ).map((tr, rowIndex) => ({
       rowIndex,
       rawLine: "",
-      cells: Array.from(tr.querySelectorAll("td")).map(
-        (td) => td.textContent?.trim() ?? ""
-      ),
+      cells: Array.from(tr.querySelectorAll("td")).map(renderedCellToMarkdown),
     }));
 
     const sectionInfo = ctx.getSectionInfo?.(tableEl) ?? null;

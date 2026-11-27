@@ -606,6 +606,44 @@ describe("TablePostProcessor source parsing", () => {
     expect(links[1].dataset.href).toBe("Obsidian API");
   });
 
+  it("should keep links in a table rendered without a note behind it", () => {
+    const { processor, ctx } = createProcessor();
+    const wrapper = buildRenderedTable(["Item", "Link"], [["", ""], ["", ""], ["", ""]]);
+    const linkCells = wrapper.querySelectorAll("tbody td:nth-child(2)");
+    linkCells[0].innerHTML =
+      '<a class="external-link" href="https://example.com/item/1.html">Store</a>';
+    linkCells[1].innerHTML =
+      '<a class="internal-link" data-href="Folder/Note" href="Folder/Note">Note</a>';
+    linkCells[2].innerHTML = "See <code>a`b</code> and <strong>bold</strong>";
+
+    processor.process(wrapper, ctx);
+
+    const cells = wrapper.querySelectorAll<HTMLElement>('.ms-db-td[data-col-index="1"]');
+    const external = cells[0].querySelector<HTMLAnchorElement>(".ms-cell-link.external-link");
+    expect(external?.textContent).toBe("Store");
+    expect(external?.getAttribute("href")).toBe("https://example.com/item/1.html");
+    const internal = cells[1].querySelector<HTMLElement>(".ms-cell-link.internal-link");
+    expect(internal?.textContent).toBe("Note");
+    expect(internal?.dataset.href).toBe("Folder/Note");
+    expect(cells[2].querySelector(".ms-cell-code")?.textContent).toBe("a`b");
+    expect(cells[2].textContent).toBe("See a`b and bold");
+  });
+
+  it("should prefer the note source over a link read back from the rendered cell", () => {
+    const text = ["| Item |", "| --- |", "| [[Folder/Note|Note]] |"].join("\n");
+
+    const { processor, ctx } = createProcessor({ text, lineStart: 0, lineEnd: 2 });
+    const wrapper = buildRenderedTable(["Item"], [[""]]);
+    wrapper.querySelector("tbody td")!.innerHTML =
+      '<a class="internal-link" data-href="Folder/Note" href="Folder/Note">Note</a>';
+
+    processor.process(wrapper, ctx);
+
+    const link = wrapper.querySelector<HTMLElement>(".ms-cell-link.internal-link");
+    expect(link?.textContent).toBe("Note");
+    expect(link?.dataset.href).toBe("Folder/Note");
+  });
+
   it("should keep the rendered text for cells whose Markdown it cannot draw", () => {
     const text = ["| Заметка |", "| --- |", "| **важно** |"].join("\n");
 
