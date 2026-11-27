@@ -210,4 +210,42 @@ describe("link-renderer", () => {
     expect(container.querySelector("code")).toBeNull();
     expect(container.textContent).toBe("Run = this.file.name now");
   });
+  it("should parse bold and italic runs into flagged tokens", () => {
+    expect(parseLinkTokens("**UniFi Flex 2.5G 8**")).toEqual([
+      { type: "text", text: "UniFi Flex 2.5G 8", strong: true },
+    ]);
+    expect(parseLinkTokens("a *b* __c__ ***d***")).toEqual([
+      { type: "text", text: "a " },
+      { type: "text", text: "b", em: true },
+      { type: "text", text: " " },
+      { type: "text", text: "c", strong: true },
+      { type: "text", text: " " },
+      { type: "text", text: "d", strong: true, em: true },
+    ]);
+  });
+
+  it("should carry emphasis across links and leave code spans alone", () => {
+    expect(parseLinkTokens("**see [Store](https://e.test/x)**")).toEqual([
+      { type: "text", text: "see ", strong: true },
+      { type: "external", text: "Store", href: "https://e.test/x", strong: true },
+    ]);
+    expect(parseLinkTokens("`**not bold**`")).toEqual([{ type: "code", text: "**not bold**" }]);
+  });
+
+  it("should leave unmatched, spaced, escaped and intraword-underscore runs as text", () => {
+    expect(toPlainText("**open")).toBe("**open");
+    expect(toPlainText("a * b * c")).toBe("a * b * c");
+    expect(toPlainText("\\*literal\\*")).toBe("\\*literal\\*");
+    expect(toPlainText("snake_case_name")).toBe("snake_case_name");
+    expect(toPlainText("https://e.test/a_b_c")).toBe("https://e.test/a_b_c");
+    expect(toPlainText("*.md")).toBe("*.md");
+  });
+
+  it("should render emphasis as strong and em elements", () => {
+    const container = document.createElement("div");
+    renderTextWithLinks(container, "**Pick** and *maybe* [[Note]]");
+    expect(container.querySelector("strong")?.textContent).toBe("Pick");
+    expect(container.querySelector("em")?.textContent).toBe("maybe");
+    expect(container.textContent).toBe("Pick and maybe Note");
+  });
 });

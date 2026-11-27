@@ -606,16 +606,28 @@ describe("TablePostProcessor source parsing", () => {
     expect(links[1].dataset.href).toBe("Obsidian API");
   });
 
-  it("should keep the rendered text for cells whose Markdown it cannot draw", () => {
-    const text = ["| Заметка |", "| --- |", "| **важно** |"].join("\n");
+  it("should bring bold back in cells the renderer flattened", () => {
+    const text = ["| Item |", "| --- |", "| **Pick** this |"].join("\n");
 
     const { processor, ctx } = createProcessor({ text, lineStart: 0, lineEnd: 2 });
-    const wrapper = buildRenderedTable(["Заметка"], [["важно"]]);
+    const wrapper = buildRenderedTable(["Item"], [["Pick this"]]);
 
     processor.process(wrapper, ctx);
 
     const cell = wrapper.querySelector<HTMLElement>('.ms-db-td[data-col-index="0"]');
-    expect(cell?.textContent).toBe("важно");
+    expect(cell?.querySelector("strong")?.textContent).toBe("Pick");
+  });
+
+  it("should keep the rendered text for cells whose Markdown it cannot draw", () => {
+    const text = ["| Note |", "| --- |", "| ~~dropped~~ |"].join("\n");
+
+    const { processor, ctx } = createProcessor({ text, lineStart: 0, lineEnd: 2 });
+    const wrapper = buildRenderedTable(["Note"], [["dropped"]]);
+
+    processor.process(wrapper, ctx);
+
+    const cell = wrapper.querySelector<HTMLElement>('.ms-db-td[data-col-index="0"]');
+    expect(cell?.textContent).toBe("dropped");
   });
 
 });
